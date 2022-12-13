@@ -15,9 +15,10 @@ from uqcsbot.bot import UQCSBot
 
 UQCS_CALENDAR_URL = "https://calendar.google.com/calendar/ical/" \
                     "q3n3pce86072n9knt3pt65fhio%40group.calendar.google.com/public/basic.ics"
-# EXTERNAL_CALENDAR_URL = "https://calendar.google.com/calendar/ical/" \
-#                         "72abf01afvsl3bjd9oq2g1avgg%40group.calendar.google.com/public/basic.ics"
-# Testing calendar: "https://calendar.google.com/calendar/ical/7djv171v2mdr4dmufq612j6uj4%40group.calendar.google.com/public/basic.ics"
+EXTERNAL_CALENDAR_URL = "https://calendar.google.com/calendar/ical/" \
+                        "72abf01afvsl3bjd9oq2g1avgg%40group.calendar.google.com/public/basic.ics"
+TESTING_CALENDAR_URL = "https://calendar.google.com/calendar/ical/en.australian%23holiday%40group.v.calendar.google.com/public/basic.ics"
+
 
 MONTH_NUMBER = {month.lower(): index for index, month in enumerate(month_abbr)}
 
@@ -270,7 +271,8 @@ class Events(commands.Cog):
                     start_time=event.start,
                     end_time=event.end,
                     entity_type=EntityType.external,
-                    location=event.location
+                    location=event.location,
+                    description="*Event created automatically by UQCSBot.*"
                 )
 
     @app_commands.command()
@@ -282,6 +284,7 @@ class Events(commands.Cog):
     @app_commands.command()
     async def allevents(self, interaction: discord.Interaction):
         """ Shows all upcoming UQCS events. """
+        await self.create_server_events()
         await self.send_events(interaction.channel, interaction, "full")
 
     @classmethod
@@ -291,7 +294,7 @@ class Events(commands.Cog):
         This method is mocked by unit tests.
         :return: The returned ics calendar file, as a stream
         """
-        http_response = requests.get(UQCS_CALENDAR_URL)
+        http_response = requests.get(TESTING_CALENDAR_URL)
         return http_response.content
 
 async def setup(bot: commands.Bot):
