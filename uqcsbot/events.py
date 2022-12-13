@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple
 
 import discord
-from discord import app_commands
+from discord import EntityType, app_commands
 import requests
 from dateutil.rrule import rrulestr
 from discord.ext import commands
@@ -162,6 +162,7 @@ class Events(commands.Cog):
     def __init__(self, bot: UQCSBot):
         self.bot = bot
         self.bot.schedule_task(self.scheduled_message, trigger='cron', hour=9, day_of_week="mon", timezone='Australia/Brisbane')
+        self.bot.schedule_task(self.create_server_events, trigger='cron', hour=17, timezone='Australia/Brisbane')
 
     async def scheduled_message(self):
         await self.send_events(self.bot.get_channel(EVENTS_CHANNEL))
@@ -248,6 +249,29 @@ class Events(commands.Cog):
                 embed.title = f"{event.get_title()}"
                 embed.description = f"{event.get_time_loc()}"
                 await channel.send(embed=embed)
+    
+    async def create_server_events(self, *args):
+        current_time = self._get_current_time()
+        event_filter = EventFilter.from_argument(args)
+        events = []
+
+        uqcs_calendar = Calendar.from_ical(self._get_calendar_file())
+        events += self._handle_calendar(uqcs_calendar)
+
+        # then we apply our event filter as generated earlier
+        events = event_filter.filter_events(events, current_time)
+        # then, we sort the events by date
+        events = sorted(events, key=lambda event_: event_.start)
+
+        if events:
+            for event in events:
+                await self.bot.uqcs_server.create_scheduled_event(
+                    name=event.get_title(),
+                    start_time=event.start,
+                    end_time=event.end,
+                    entity_type=EntityType.external,
+                    location=event.location
+                )
 
     @app_commands.command()
     @app_commands.describe(weeks="Number of weeks to return, defaults to 2")
